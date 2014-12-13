@@ -3,8 +3,8 @@ from VBrowser import VBrowser
 host = "httpbin.org"
 httpBin = VBrowser(host)
 
-
-print(httpBin.get("/get"))
+httpBin.get("/get", params={"a": "b"})
+print(httpBin.responses[0])
 """
 username = input("Username: ")
 password = input("Password: ")
