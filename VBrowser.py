@@ -12,15 +12,16 @@ class VBrowser:
         self.responseStrs = []
 
     def request(self, path, method, params):
+        params = urllib.parse.urlencode(params)
         self.connection.request(method, path, params, self.headers)
         response = self.connection.getresponse()
         self.responseObjs.insert(0, response)
         self.responseStrs.insert(0, response.read())
         return self.responseStrs[0]
 
-    def get(self, path, params=None):
-        return self.request(path, "GET", params={})
+    def get(self, path, params={}):
+        return self.request(path, "GET", params=params)
 
-    def post(self, path, params=None):
-        return self.request(path, "POST", params={})
+    def post(self, path, params={}):
+        return self.request(path, "POST", params=params)
 
