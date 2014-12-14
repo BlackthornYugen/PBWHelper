@@ -1,10 +1,16 @@
 from VBrowser import VBrowser
+import urllib.parse
 
 host = "httpbin.org"
 httpBin = VBrowser(host)
+params = urllib.parse.urlencode({"username": "joe", "password": "demo", "submit": "Login"})
+response = httpBin.post("/post", params=params)
 
-httpBin.get("/get", params={"a": "b"})
-print(httpBin.responses[0])
+#print(response)
+lines = response.split(b"\n")
+for line in range(len(lines)):
+    print(lines[line])
+
 """
 username = input("Username: ")
 password = input("Password: ")
