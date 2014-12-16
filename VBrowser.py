@@ -1,4 +1,4 @@
-import http.client, urllib.parse, http.cookies
+import http.cookies, http.client, urllib.parse, urllib.request, requests
 
 
 class VBrowser:
@@ -20,7 +20,7 @@ class VBrowser:
         for i in range(len(headerItems)):
             if "Set-Cookie" == headerItems[i][0]:
                 self.cookies.load(headerItems[i][1])
-                self.headers["Cookie"] = self.cookies.output(attrs=[], header="")
+                self.headers["Cookie"] = self.cookies.output(attrs=[], header="", sep=";")
         self.responseObjs.insert(0, response)
         self.responseStrs.insert(0, response.read())
         return response.status
@@ -30,4 +30,17 @@ class VBrowser:
 
     def post(self, path, params={}):
         return self.request(path, "POST", params=params)
+
+    def retrieve(self):
+        urllib.request.urlretrieve()
+
+    def __getitem__(self, key):
+        return self.responseObjs[0].headers[key]
+
+    def printReceipt(self):
+        responseObj = self.responseObjs[0];
+        print("Request returned: %s - %s" % (responseObj.status, responseObj.reason))
+        lines = self.responseStrs[0].split(b"\n")
+        for line in range(len(lines)):
+            print(lines[line])
 
