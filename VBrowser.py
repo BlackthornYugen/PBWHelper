@@ -1,6 +1,5 @@
 import http.cookies, http.client, urllib.parse, urllib.request, requests
 
-
 class VBrowser:
     """A virtual browser class"""
 
