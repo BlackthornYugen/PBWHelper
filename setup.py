@@ -8,6 +8,7 @@ setup(
     license='',
     install_requires=[
       'requests',
+      'rarfile'
     ],
     author='John Steel',
     author_email='',
