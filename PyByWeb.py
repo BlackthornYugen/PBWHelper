@@ -51,20 +51,20 @@ else:
         for chunk in resp.iter_content(download_chunk_size):
             fd.write(chunk)
         fd.close()
-
     print("Rar file downloaded.")
 
     if not rarfile.is_rarfile(turn_archive_file):
         print("Turn file is not a valid RAR archive.")
     else:
         # Extract to savegame folder
-        rarfile.RarFile(turn_archive_file).extractall()
-        # TODO: get and store the name of the extracted file
-        extracted_turn = "%s.gam" % game_name
+        archive = rarfile.RarFile(turn_archive_file)
+        turn_file = archive.infolist()[0]
+        archive.extract(turn_file)
         print("Turn file extracted. Launching Space Empires IV.")
         empire_index = choice("Empire Index", default_empire_index)
         empire_password = choice("Password", default_empire_pass, True)
-        process_exit_id = subprocess.Popen(["Se4.exe", extracted_turn, empire_password, empire_index, ' ']).wait()
+        print("Launching Space Empires IV. This may take a few moments.")
+        process_exit_id = subprocess.Popen(["Se4.exe", turn_file.filename, empire_password, empire_index, ' ']).wait()
         if process_exit_id == 2:
             print("Empire index or Empire password invalid. Try again?")
             # TODO: Offer to let the user enter new empire info and try again
