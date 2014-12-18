@@ -1,4 +1,5 @@
 import subprocess
+import re
 import requests
 import rarfile
 
@@ -61,8 +62,19 @@ else:
         turn_file = archive.infolist()[0]
         archive.extract(turn_file)
         print("Turn file extracted. Launching Space Empires IV.")
+        with open(turn_file.filename, "rb") as fd:
+            binary_data = fd.read(2000)
+            unicode_data = binary_data.decode("utf-8", errors="ignore")
+            fd.close()
+        columns = "%-5s %-34s %-30s %-35s %s"
+        pattern = re.compile(r"(\d)\s{5,}(.+?)\s{5,}(.+?)\s*?(\S*?)(Alive|Dead)")
+        print(columns % ("", "Empire Name", "Leader", "Email", "Status"))
+        print(columns % ("", "-------------------------------", "----------------------------", "--------------------------------", "------"))
+        for empire in pattern.findall(unicode_data):
+            print(columns % empire)
+
         empire_index = choice("Empire Index", default_empire_index)
-        empire_password = choice("Password", default_empire_pass, True)
+        empire_password = choice("Empire Password", default_empire_pass, True)
         print("Launching Space Empires IV. This may take a few moments.")
         process_exit_id = subprocess.Popen(["Se4.exe", turn_file.filename, empire_password, empire_index, ' ']).wait()
         if process_exit_id == 2:
@@ -70,8 +82,10 @@ else:
             # TODO: Offer to let the user enter new empire info and try again
         else:
             print("Space Empires has been closed. Uploading file.")
-            resp = pbw.post("http://pbw.spaceempires.net/games/%s/player-turn/upload" % game_name,
-                            files={"plr_file": open("./savegame/%s_000%s.plr" % (game_name, empire_index), "rb")})
+            with open("./savegame/%s_000%s.plr" % (game_name, empire_index), "rb") as fd:
+                resp = pbw.post("http://pbw.spaceempires.net/games/%s/player-turn/upload" % game_name,
+                                files={"plr_file": fd}, allow_redirects=False)
+                fd.close()
             if resp.status_code not in range (200,399):
                 print("Failed to upload plr file.")
             else:
