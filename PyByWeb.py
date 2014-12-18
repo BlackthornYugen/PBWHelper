@@ -1,52 +1,83 @@
-import requests, rarfile
+import subprocess
+import requests
+import rarfile
 
 # Settings
 turn_archive_file = "playerTurn.rar"
 download_chunk_size = 10
 
+default_game_name = "elemental"
+default_pbw_user = "pbwUser"
+default_pbw_pass = "pbwPass"
+default_empire_index = "1"
+default_empire_pass = "empirePass"
+
 # Print URL Hook Function
 def print_url(r, *args, **kwargs):
-    print("\nLOADED URL: \"%s\"" % r.url)
+    print("LOADED URL: \"%s\"" % r.url)
+
 
 # Null Replacement Function
-def if_null(var, val):
-  if var is None or var == "":
-    return val
-  return var
+def choice(prompt, val, hide_default=False):
+    if hide_default:
+        var = input("%s (***): " % prompt)
+    else:
+        var = input("%s (%s): " % (prompt, val))
+    if var is None or var == "":
+        return val
+    return var
 
 # Create Session Object
 pbw = requests.Session()
 pbw.hooks = {"response": print_url}
 
 # Get user/pass from user
-username = if_null(input("Username: "), "defaultUser")
-password = if_null(input("Password: "), "defaultPass")
+username = choice("Username", default_pbw_user)
+password = choice("Password", default_pbw_pass, True)
 
 # Authenticate with PBW
 resp = pbw.post("https://pbw.spaceempires.net/login/process",
                 data=dict(username=username, password=password, submit="login"), timeout=5)
 
-# Print the response
-print(resp.text)
-print(resp.status_code)
-print(resp.url)
-
 if resp.status_code == 400:
     print("Authentication Failed")
 else:
     # Download Turn File (RAR)
-    resp = pbw.get("http://pbw.spaceempires.net/games/elemental/player-turn/download", stream=True)
-    print(resp.status_code)
+    game_name = choice("Game Name", default_game_name)
+    resp = pbw.get("http://pbw.spaceempires.net/games/%s/player-turn/download" % game_name, stream=True)
 
     # Write turn rar file to disk
     with open(turn_archive_file, 'wb') as fd:
         for chunk in resp.iter_content(download_chunk_size):
             fd.write(chunk)
+        fd.close()
 
-    # Verify that it is a valid RAR file (UNRAR MUST BE IN PATH)
-    if rarfile.is_rarfile(turn_archive_file):
-        print("Rar file downloaded.")
-        rarfile.RarFile(turn_archive_file).extractall()
-        print("Turn file extracted.")
-    else:
+    print("Rar file downloaded.")
+
+    if not rarfile.is_rarfile(turn_archive_file):
         print("Turn file is not a valid RAR archive.")
+    else:
+        # Extract to savegame folder
+        rarfile.RarFile(turn_archive_file).extractall()
+        # TODO: get and store the name of the extracted file
+        extracted_turn = "%s.gam" % game_name
+        print("Turn file extracted. Launching Space Empires IV.")
+        empire_index = choice("Empire Index", default_empire_index)
+        empire_password = choice("Password", default_empire_pass, True)
+        process_exit_id = subprocess.Popen(["Se4.exe", extracted_turn, empire_password, empire_index, ' ']).wait()
+        if process_exit_id == 2:
+            print("Empire index or Empire password invalid. Try again?")
+            # TODO: Offer to let the user enter new empire info and try again
+        else:
+            print("Space Empires has been closed. Uploading file.")
+            resp = pbw.post("http://pbw.spaceempires.net/games/%s/player-turn/upload" % game_name,
+                            files={"plr_file": open("./savegame/%s_000%s.plr" % (game_name, empire_index), "rb")})
+            if resp.status_code not in range (200,399):
+                print("Failed to upload plr file.")
+            else:
+                print("Successfully uploaded plr file.")
+
+print("Exiting.")
+pbw.close()
+# TODO: Figure out why I need to call exit, it should just exit here unless I didn't close/end something...
+exit()
