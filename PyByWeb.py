@@ -7,6 +7,7 @@ import rarfile
 turn_archive_file = "playerTurn.rar"
 download_chunk_size = 10
 
+# Defaults
 default_game_name = "elemental"
 default_pbw_user = "pbwUser"
 default_pbw_pass = "pbwPass"
@@ -51,7 +52,6 @@ else:
     with open(turn_archive_file, 'wb') as fd:
         for chunk in resp.iter_content(download_chunk_size):
             fd.write(chunk)
-        fd.close()
     print("Rar file downloaded.")
 
     if not rarfile.is_rarfile(turn_archive_file):
@@ -61,18 +61,16 @@ else:
         archive = rarfile.RarFile(turn_archive_file)
         turn_file = archive.infolist()[0]
         archive.extract(turn_file)
-        print("Turn file extracted. Launching Space Empires IV.")
+        print("Turn file extracted.")
         with open(turn_file.filename, "rb") as fd:
             binary_data = fd.read(2000)
             unicode_data = binary_data.decode("utf-8", errors="ignore")
-            fd.close()
         columns = "%-5s %-34s %-30s %-35s %s"
         pattern = re.compile(r"(\d)\s{5,}(.+?)\s{5,}(.+?)\s*?(\S*?)(Alive|Dead)")
         print(columns % ("", "Empire Name", "Leader", "Email", "Status"))
-        print(columns % ("", "-------------------------------", "----------------------------", "--------------------------------", "------"))
+        print(columns % ("", "-" * 34, "-" * 30, "-" * 35, "-" * 6))
         for empire in pattern.findall(unicode_data):
             print(columns % empire)
-
         empire_index = choice("Empire Index", default_empire_index)
         empire_password = choice("Empire Password", default_empire_pass, True)
         print("Launching Space Empires IV. This may take a few moments.")
@@ -85,8 +83,7 @@ else:
             with open("./savegame/%s_000%s.plr" % (game_name, empire_index), "rb") as fd:
                 resp = pbw.post("http://pbw.spaceempires.net/games/%s/player-turn/upload" % game_name,
                                 files={"plr_file": fd}, allow_redirects=False)
-                fd.close()
-            if resp.status_code not in range (200,399):
+            if resp.status_code not in range(200, 399):
                 print("Failed to upload plr file.")
             else:
                 print("Successfully uploaded plr file.")
