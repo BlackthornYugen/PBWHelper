@@ -12,7 +12,8 @@ setup(
     license='',
     install_requires=[
       'requests',
-      'rarfile'
+      'rarfile',
+      'py2exe'
     ],
     options={"py2exe": py2exe_options, "build_exe": build_exe_options},
     zipfile=None,
