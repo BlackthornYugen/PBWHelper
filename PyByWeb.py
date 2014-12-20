@@ -2,25 +2,49 @@ import subprocess
 import re
 import requests
 import rarfile
+import json
+import os
 
 # Settings
 turn_archive_file = "playerTurn.rar"
 download_chunk_size = 10
+settings_file = "PyByWeb.json"
+certificate_file = "cacert.pem"
 
-# Defaults
-default_game_name = "elemental"
-default_pbw_user = "pbwUser"
-default_pbw_pass = "pbwPass"
-default_empire_index = "1"
-default_empire_pass = "empirePass"
+# If cacert.pem exists; use it! Otherwise offer to let user continue without SSL.
+if os.path.isfile(certificate_file):
+    verify=certificate_file
+else:
+    print('Certificate file "%s" was not found!' % certificate_file)
+    if(input('Enter "Yes" to continue without SSL: ').lower().strip() != "yes"):
+        input("Press enter to exit.")
+        exit()
+    verify=False
+
+# If settings file doesn't exist, make it.
+if not os.path.isfile(settings_file):
+    with open(settings_file, "w") as fd:
+        fd.write("""{
+  "game_name" : "elemental",
+  "pbw_user" : "pbwUser",
+  "pbw_pass": "pbwPass",
+  "empire_index" : "1",
+  "empire_pass" : "empirePass",
+  "confirm_with_user" : true
+}""")
+
+# Load settings.json
+with open(settings_file) as fd:
+    settings = json.loads(fd.read())
 
 # Print URL Hook Function
 def print_url(r, *args, **kwargs):
     print("LOADED URL: \"%s\"" % r.url)
 
-
 # Null Replacement Function
 def choice(prompt, val, hide_default=False):
+    if not settings["confirm_with_user"]:
+        return val
     if hide_default:
         var = input("%s (***): " % prompt)
     else:
@@ -34,18 +58,19 @@ pbw = requests.Session()
 pbw.hooks = {"response": print_url}
 
 # Get user/pass from user
-username = choice("Username", default_pbw_user)
-password = choice("Password", default_pbw_pass, True)
+username = choice("Username", settings["pbw_user"])
+password = choice("Password", settings["pbw_pass"], True)
 
 # Authenticate with PBW
 resp = pbw.post("https://pbw.spaceempires.net/login/process",
-                data=dict(username=username, password=password, submit="login"), timeout=5)
+                data=dict(username=username, password=password, submit="login"),
+                timeout=5, verify=verify)
 
 if resp.status_code == 400:
     print("Authentication Failed")
 else:
     # Download Turn File (RAR)
-    game_name = choice("Game Name", default_game_name)
+    game_name = choice("Game Name", settings["game_name"])
     resp = pbw.get("http://pbw.spaceempires.net/games/%s/player-turn/download" % game_name, stream=True)
 
     # Write turn rar file to disk
@@ -65,19 +90,21 @@ else:
         with open(turn_file.filename, "rb") as fd:
             binary_data = fd.read(2000)
             unicode_data = binary_data.decode("utf-8", errors="ignore")
-        columns = "%-5s %-34s %-30s %-35s %s"
+        print()
+        columns = "%-5s %-34s %-30s\n      %-34s %s"
         pattern = re.compile(r"(\d)\s{5,}(.+?)\s{5,}(.+?)\s*?(\S*?)(Alive|Dead)")
         print(columns % ("", "Empire Name", "Leader", "Email", "Status"))
-        print(columns % ("", "-" * 34, "-" * 30, "-" * 35, "-" * 6))
+        horizontal_ruler = " " * 6 + "-"*65
+        print(horizontal_ruler)
         for empire in pattern.findall(unicode_data):
             print(columns % empire)
-        empire_index = choice("Empire Index", default_empire_index)
-        empire_password = choice("Empire Password", default_empire_pass, True)
+            print(horizontal_ruler)
+        empire_index = choice("Empire Index", settings["empire_index"])
+        empire_password = choice("Empire Password", settings["empire_pass"], True)
         print("Launching Space Empires IV. This may take a few moments.")
         process_exit_id = subprocess.Popen(["Se4.exe", turn_file.filename, empire_password, empire_index, ' ']).wait()
         if process_exit_id == 2:
-            print("Empire index or Empire password invalid. Try again?")
-            # TODO: Offer to let the user enter new empire info and try again
+            print("Empire index or Empire password invalid.")
         else:
             print("Space Empires has been closed. Uploading file.")
             with open("./savegame/%s_000%s.plr" % (game_name, empire_index), "rb") as fd:
@@ -88,7 +115,5 @@ else:
             else:
                 print("Successfully uploaded plr file.")
 
-print("Exiting.")
 pbw.close()
-# TODO: Figure out why I need to call exit, it should just exit here unless I didn't close/end something...
-exit()
+input("Press Enter to exit.")
