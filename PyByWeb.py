@@ -19,14 +19,15 @@ else:
 # If settings file doesn't exist, make it.
 if not os.path.isfile(settings_file):
     with open(settings_file, "w") as fd:
-        fd.write("""{
-  "game_name" : "elemental",
-  "pbw_user" : "pbwUser",
-  "pbw_pass": "pbwPass",
-  "empire_index" : "1",
-  "empire_pass" : "empirePass",
-  "confirm_with_user" : true
-}""")
+        fd.write(('{\n'
+                  '  "game_name" : "elemental",\n'
+                  '  "pbw_user" : "pbwUser",\n'
+                  '  "pbw_pass": "pbwPass",\n'
+                  '  "empire_index" : "1",\n'
+                  '  "empire_pass" : "empirePass",\n'
+                  '  "confirm_with_user" : true\n'
+                  '}'
+        ))
 
 # Load settings.json
 with open(settings_file) as fd: settings = json.loads(fd.read())
